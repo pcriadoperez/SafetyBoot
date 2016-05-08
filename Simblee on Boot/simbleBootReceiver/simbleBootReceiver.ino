@@ -27,10 +27,10 @@ void loop() {
 
 void SimbleeCOM_onReceive(unsigned int esn, const char *payload, int len, int rssi)
 {
-  for (int i = 0; i < len; i++){
+  for (int i = 1; i < len; i++){
     Serial.println(int(payload[i]));
     if(int(payload[0])==0 && i>0){ // payload[0]==0 for left and payload[0]==1 for Right
-      analogWrite(i, int(payload[i]));
+      analogWrite(i+1, int(payload[i]));
     }
   }
   Serial.println("end message");

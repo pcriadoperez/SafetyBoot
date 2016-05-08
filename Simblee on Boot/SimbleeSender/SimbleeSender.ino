@@ -15,7 +15,7 @@
 
 #include "SimbleeCOM.h"
 boolean update = false;
-char payload[] = {0,0,0,0,0,0,0};
+char payload[] = {0,250,250,250,128,0,0};
 void setup() {
   Serial.begin(9600);
   SimbleeCOM.begin();

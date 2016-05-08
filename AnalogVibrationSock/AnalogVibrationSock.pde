@@ -22,10 +22,11 @@ long waveStartTime=0;
 float widthOfMotorArray;
 float  heightOfMotorArray;
 
-PShape[] waveCreator;
+PShape waveCreator;
 float motorsCenterX;
 float motorsCenterY;
 
+PVector wavePoint, waveRect, waveNormal , translation;
 int distanceBetweenShoes= 550;
 
 //GUI
@@ -39,14 +40,15 @@ Slider speedSlider;
 
 //Processing
 Motor[] motors;
-ArrowButton leftButton, rightButton, upButton, downButton;
+ArrowButton leftButton, rightButton, upButton, downButton, upLeftButton, upRightButton;
 float vibrateLeft_startTime = -100;
 
 void setup()
 {
+  translation = new PVector();
   double timer = millis();
-  println("setup() start ");
-  myPort = new Serial(this, Serial.list()[1], 9600);
+  println(Serial.list());
+  myPort = new Serial(this, Serial.list()[0], 9600);
 
   //Processing Setup
   size(1200, 1000);
@@ -57,16 +59,15 @@ void setup()
   }
   updateMotorsCenter(); 
   //Wave
-  waveCreator = new PShape[2];
-  waveCreator[0] = createShape(ELLIPSE, 0, 0, sizeOfWave, sizeOfWave);
-  waveCreator[0].setVisible(false);
-  waveCreator[1] = createShape(ELLIPSE, 600, 0, sizeOfWave, sizeOfWave);
-  waveCreator[1].setVisible(false);
+  waveCreator= createShape(RECT, 0, 0, sizeOfWave, sizeOfWave);
+  waveCreator.setVisible(false);
   //Controls
   leftButton = new ArrowButton(500, 100, PI/2);
-  rightButton = new ArrowButton(600, 100, -PI/2);
-  upButton = new ArrowButton(550, 50, PI);
-  downButton = new ArrowButton(550, 150, 0);
+  upLeftButton = new ArrowButton(550, 75, PI*3/4);
+  rightButton = new ArrowButton(700, 100, -PI/2);
+  upRightButton = new ArrowButton(650, 75, -PI*3/4);
+  upButton = new ArrowButton(600, 50, PI);
+  downButton = new ArrowButton(600, 150, 0);
   //Foot image
   rightBoot = loadImage("rightBoot.png");
   leftBoot = loadImage("leftBoot.png");
@@ -94,7 +95,7 @@ void setup()
     ;
   cp5.addSlider("speedSliderValue")
     .setPosition(500, 600)
-    .setRange(0, 2000)
+    .setRange(0, 5000)
     .setSize(200, 50)
     ;
 
@@ -118,6 +119,7 @@ void setup()
 
 void draw()
 {
+  println(waveCreator.getVertexCount());
   if (myPort.available()>0) println(myPort.readBytes());
   double timer = millis();
   println("draw() start");
@@ -137,19 +139,14 @@ void draw()
   if (waveActive) {
     if (millis()- waveStartTime>periodOfWave) {
       waveActive = false;
-      waveCreator[0].setVisible(false);
-      waveCreator[1].setVisible(false);
+      waveCreator.setVisible(false);
       powerOff();
     } else {
-      waveCreator[0].setVisible(true);
-      waveCreator[0].translate(((widthOfMotorArray+2*sizeOfWave)*cos(angleOfWave*PI/180))/(periodOfWave*frameRate/1000), ((heightOfMotorArray+2*sizeOfWave) * sin(angleOfWave*PI/180))/(periodOfWave * frameRate/1000));
-      waveCreator[1].setVisible(true);
-      waveCreator[1].translate(((widthOfMotorArray+2*sizeOfWave)*cos(angleOfWave*PI/180))/(periodOfWave*frameRate/1000), ((heightOfMotorArray+2*sizeOfWave) * sin(angleOfWave*PI/180))/(periodOfWave * frameRate/1000));
-      waveX = waveX + ((widthOfMotorArray+2*sizeOfWave)*cos(angleOfWave*PI/180))/(periodOfWave*frameRate/1000);
-      waveY = waveY + ((heightOfMotorArray+2*sizeOfWave) * sin(angleOfWave*PI/180))/(periodOfWave * frameRate/1000);
-      shape(waveCreator[0]);
-      shape(waveCreator[1]);
-      mapDoublePower(waveX, waveY);
+      waveCreator.setVisible(true);
+      waveCreator.translate(0, width/(periodOfWave * frameRate/1000));
+      wavePoint.add(PVector.mult(waveNormal, width/(periodOfWave * frameRate/1000)));
+      shape(waveCreator, width/2, height/2);
+      mapWavePower();
     }
   }
 
@@ -162,6 +159,8 @@ void draw()
   rightButton.display();
   upButton.display();
   downButton.display();
+  upRightButton.display();
+  upLeftButton.display();
 
   //UpdateArduino
   updateArduino();
@@ -182,7 +181,7 @@ void mapPower(float x, float y) {
     else unit.power = 255-int(map(distance, 0, sizeOfWave, 0, 255));
   }
 }
-void mapDoublePower(float x, float y) {
+void mapRectPower(float x, float y) {
   for (int i=0; i<motors.length; i++) {
     Motor unit = motors[i];
     float x_distance = x - unit.x;
@@ -196,30 +195,23 @@ void mapDoublePower(float x, float y) {
   }
 }
 void mousePressed() {
-  /*
-for (int i=0; i<motors.lengupload
-th; i++) {
-   if (overCircle(motors[i].x, motors[i].y, motors[i].size)) {
-   arduino.digitalWrite(pin_motor[i], arduino.HIGH);
-   motors[i].power=true;
-   }
-   else {
-   arduino.digitalWrite(pin_motor[i], arduino.LOW);
-   motors[i].power=false;
-   }
-   }
-   */
   if (overCircle(leftButton.x, leftButton.y, 50)) {
-    startWave(180, periodOfWave, sizeOfWave);
-  }
-  if (overCircle(upButton.x, upButton.y, 50)) {
-    startWave(270, periodOfWave, sizeOfWave);
-  }
-  if (overCircle(downButton.x, downButton.y, 50)) {
     startWave(90, periodOfWave, sizeOfWave);
   }
-  if (overCircle(rightButton.x, rightButton.y, 50)) {
+  if (overCircle(upButton.x, upButton.y, 50)) {
+    startWave(180, periodOfWave, sizeOfWave);
+  }
+  if (overCircle(downButton.x, downButton.y, 50)) {
     startWave(0, periodOfWave, sizeOfWave);
+  }
+  if (overCircle(rightButton.x, rightButton.y, 50)) {
+    startWave(270, periodOfWave, sizeOfWave);
+  }
+   if (overCircle(upRightButton.x, upRightButton.y, 50)) {
+    startWave(225, periodOfWave, sizeOfWave);
+  }
+   if (overCircle(upLeftButton.x, upLeftButton.y, 50)) {
+    startWave(135, periodOfWave, sizeOfWave);
   }
   if (overCircle(motors[0].x, motors[0].y, 75)) {
   }
@@ -255,21 +247,24 @@ void powerOff() {
   }
 }
 void startWave(int angle, int period, int size) {
-  double timer = millis();
-  println("startWave() start");
   waveStartTime = millis();
   waveActive=true;
   angleOfWave = angle;
   periodOfWave = period;
   sizeOfWave = size;
-  waveCreator[0].setVisible(true);
-  waveCreator[1].setVisible(true);
-  waveX = motorsCenterX -widthOfMotorArray*cos(angle*PI/180)/2 -sizeOfWave*cos(angle*PI/180);
-  waveY=motorsCenterY - heightOfMotorArray*sin(angle*PI/180)/2 - sizeOfWave*sin(angle*PI/180);
-  waveCreator[0] = createShape(ELLIPSE, waveX, waveY, size, size);
-  waveCreator[1] = createShape(ELLIPSE, waveX+distanceBetweenShoes, waveY, size, size);
-  println("startWave() end: "+( millis()-timer));
-  println("");
+  waveCreator.setVisible(true);
+  wavePoint = new PVector(width/2, height/2);
+  waveRect = PVector.fromAngle(angle*PI/180);
+  waveNormal = PVector.fromAngle((angle+90)*PI/180);
+  // Rotate
+  waveCreator = createShape(RECT, 0, 0, width, size);
+  waveCreator.rotate(angle*PI/180);
+  waveCreator.translate(-width/2,-width/2);
+  //Translate
+  PVector.mult(waveNormal, -width/2, translation);
+  wavePoint.add(translation);
+  PVector.mult(waveRect, -width/2, translation);
+  wavePoint.add(translation);
 }
 void delay(int delay) {
   double timer = millis();
@@ -321,4 +316,12 @@ public void sendWave(int Event) {
   startWave(angleKnobValue, speedSliderValue, sizeOfWave);
   println("setup() start: "+ (millis()-timer));
   println("");
+}
+void mapWavePower(){
+  for (Motor unit : motors) {
+    PVector position = new PVector ( unit.x, unit.y);
+    float distance = abs(PVector.dot(PVector.sub(position, wavePoint), waveNormal));
+    if (distance > sizeOfWave) unit.power = 0;
+    else unit.power = 255-int(map(distance, 0, sizeOfWave, 0, 255));
+  }
 }
