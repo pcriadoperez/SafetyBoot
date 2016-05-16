@@ -10,9 +10,12 @@ class ArrowButton{
   void display(){
     pushMatrix();
     translate(x,y);
+    fill(100);
     ellipse(0,0,size,size);
     rotate(rotation);
+    stroke(20);
     triangle(-20,-5,20,-5,0,20);
+    noStroke();
     popMatrix();
   }
 }

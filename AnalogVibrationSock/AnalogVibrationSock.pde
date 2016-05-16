@@ -7,6 +7,7 @@ import processing.serial.*;
 Serial myPort;
 PImage leftBoot;
 PImage rightBoot;
+PImage manIcon;
 
 //Will create UI using library for size,angle and send wave button
 //Values for now
@@ -18,6 +19,10 @@ boolean waveActive = false;
 float waveX;
 float waveY;
 long waveStartTime=0;
+float mouseAngle;
+float angleThreshold = HALF_PI;
+PVector manIconLocation = new PVector(600, 350);
+
 
 float widthOfMotorArray;
 float  heightOfMotorArray;
@@ -37,7 +42,7 @@ int speedSliderValue = 500;
 Knob angleKnob;
 Knob sizeOfWaveKnob;
 Slider speedSlider;
-
+boolean radialMode = true;
 //Processing
 Motor[] motors;
 ArrowButton leftButton, rightButton, upButton, downButton, upLeftButton, upRightButton;
@@ -71,6 +76,7 @@ void setup()
   //Foot image
   rightBoot = loadImage("rightBoot.png");
   leftBoot = loadImage("leftBoot.png");
+  manIcon = loadImage("man-icon.png");
   //GUI
   cp5 = new ControlP5(this);
 
@@ -98,6 +104,11 @@ void setup()
     .setRange(0, 5000)
     .setSize(200, 50)
     ;
+    cp5.addToggle("radialMode")
+     .setPosition(800,600)
+     .setSize(50,20)
+     .setValue(true)
+   ;
 
   sizeOfWaveKnob = cp5.addKnob("sizeOfWave")
     .setRange(0, 360)
@@ -126,6 +137,12 @@ void draw()
   background (255, 255, 255);
   image(rightBoot, width/2, 0, width/2, rightBoot.height*width/(2*rightBoot.width));
   image(leftBoot, 0, 0, width/2, leftBoot.height*width/(2*leftBoot.width));
+  fill(100,100);
+  noStroke();
+  if(radialMode) {
+    arc(manIconLocation.x, manIconLocation.y , 1000,1000, mouseAngle - angleThreshold, mouseAngle + angleThreshold);
+    image(manIcon, manIconLocation.x-25, manIconLocation.y-25, 50,50);
+  }
   textSize(14);
   text("frameRate: "+frameRate, 10, 10);
   text("frameCount: "+frameCount, 10, 20);
@@ -169,8 +186,15 @@ void draw()
 }
 
 void mouseMoved() {
-  mapPower(mouseX, mouseY);
+  if(radialMode){
+    mouseAngle = PVector.angleBetween(new PVector(mouseX - manIconLocation.x, mouseY- manIconLocation.y), new PVector(1,0));
+    if(mouseY<manIconLocation.y)mouseAngle = -mouseAngle;
+    anglePower();
+  }
+  else mapPower(mouseX, mouseY);
+  println(radialMode);
 }
+
 
 void mapPower(float x, float y) {
   for (Motor unit : motors) {
@@ -180,6 +204,14 @@ void mapPower(float x, float y) {
     if (distance > sizeOfWave) unit.power = 0;
     else unit.power = 255-int(map(distance, 0, sizeOfWave, 0, 255));
   }
+}
+
+void anglePower(){
+ for(Motor unit : motors){
+  PVector relativeLocation = new PVector ( unit.x - manIconLocation.x, unit.y - manIconLocation.y);
+  if(PVector.angleBetween(relativeLocation, new PVector(mouseX - manIconLocation.x, mouseY- manIconLocation.y))< angleThreshold) unit.power = 255;
+  else unit.power = 0;
+ }
 }
 void mapRectPower(float x, float y) {
   for (int i=0; i<motors.length; i++) {
