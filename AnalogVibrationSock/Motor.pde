@@ -3,6 +3,7 @@ class Motor{
   int fill=200;
   float size;
   int power=0;
+  double squareTimeChange=0;
   
   Motor(int xTemp, int yTemp, int tempSize){
     x=xTemp;

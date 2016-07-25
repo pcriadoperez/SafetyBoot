@@ -18,6 +18,7 @@ boolean update = false;
 char payload[] = {0,250,250,250,128,0,0};
 void setup() {
   Serial.begin(9600);
+   printf("The factory assigned ESN for this Simblee is: 0x%08x\n", SimbleeCOM.getESN());
   SimbleeCOM.begin();
 }
 

@@ -23,6 +23,10 @@ float mouseAngle;
 float angleThreshold = HALF_PI;
 PVector manIconLocation = new PVector(600, 350);
 
+double squareTimeChange=0;
+int squareDurationOn=150;
+int squareDurationOff=75;
+boolean squareHigh=false;
 
 float widthOfMotorArray;
 float  heightOfMotorArray;
@@ -99,9 +103,35 @@ void setup()
     .setColorActive(color(255, 255, 0))
     .setDragDirection(Knob.HORIZONTAL)
     ;
+    angleKnob = cp5.addKnob("squareDurationOff")
+    .setRange(0, 1000)
+    .setValue(250)
+    .setPosition(825, 700)
+    .setRadius(50)
+    .setNumberOfTickMarks(360)
+    .setTickMarkLength(4)
+    .snapToTickMarks(true)
+    .setColorForeground(color(255))
+    .setColorBackground(color(0, 160, 100))
+    .setColorActive(color(255, 255, 0))
+    .setDragDirection(Knob.HORIZONTAL)
+    ;
+    angleKnob = cp5.addKnob("squareDurationOn")
+    .setRange(0, 1000)
+    .setValue(250)
+    .setPosition(950, 700)
+    .setRadius(50)
+    .setNumberOfTickMarks(360)
+    .setTickMarkLength(4)
+    .snapToTickMarks(true)
+    .setColorForeground(color(255))
+    .setColorBackground(color(0, 160, 100))
+    .setColorActive(color(255, 255, 0))
+    .setDragDirection(Knob.HORIZONTAL)
+    ;
   cp5.addSlider("speedSliderValue")
     .setPosition(500, 600)
-    .setRange(0, 5000)
+    .setRange(0, 10000)
     .setSize(200, 50)
     ;
     cp5.addToggle("radialMode")
@@ -152,6 +182,8 @@ void draw()
   text("Speed: ", 520, 580);
   text("Size:", 420, 680);
   text("Angle:", 620, 680);
+  text("HZ OFF:", 800, 680);
+  text("HZ ON:", 1000, 680);
   //Wave Update
   if (waveActive) {
     if (millis()- waveStartTime>periodOfWave) {
@@ -189,7 +221,7 @@ void mouseMoved() {
   if(radialMode){
     mouseAngle = PVector.angleBetween(new PVector(mouseX - manIconLocation.x, mouseY- manIconLocation.y), new PVector(1,0));
     if(mouseY<manIconLocation.y)mouseAngle = -mouseAngle;
-    anglePower();
+    //anglePower();
   }
   else mapPower(mouseX, mouseY);
   println(radialMode);
@@ -212,6 +244,22 @@ void anglePower(){
   if(PVector.angleBetween(relativeLocation, new PVector(mouseX - manIconLocation.x, mouseY- manIconLocation.y))< angleThreshold) unit.power = 255;
   else unit.power = 0;
  }
+ 
+}
+int squareWave(Motor unit){
+  println(unit.power);
+  println("millis: "+millis()+" Change time: "+squareTimeChange);
+   if(unit.power==0 && millis()-squareTimeChange>squareDurationOff){
+   println("changeON");
+   return 255;
+   }
+   if(unit.power==0) {println("stayOff");return 0;}
+  if(unit.power==255 && millis()-squareTimeChange>squareDurationOn){
+    println("changeOFF");
+    return 0;
+  }
+  println("stayOn");
+  return 255;
 }
 void mapRectPower(float x, float y) {
   for (int i=0; i<motors.length; i++) {
@@ -258,6 +306,44 @@ void mouseDragged() {
     }
   }
 }
+void keyPressed() {
+  if (key == 'a') {
+     for (Motor unit : motors) {
+       unit.power=squareWave(unit);
+     }
+     if((!squareHigh && millis()-squareTimeChange>squareDurationOff) ||(squareHigh && millis()-squareTimeChange>squareDurationOn)){ println("Square Change"); squareTimeChange = millis(); squareHigh=!squareHigh;}
+  }
+  if(key =='s'){
+    for (Motor unit : motors) {
+       unit.power=0;
+     }
+  }
+  if(key =='8'){
+   motors[4].power=255;
+   motors[5].power=255;
+   motors[8].power=255;
+    motors[9].power=255;
+  }
+  if(key =='5'){
+    motors[0].power=255;
+     motors[1].power=255;
+     motors[10].power=255;
+    motors[11].power=255;
+  }
+  if(key =='4'){
+    motors[6].power=255;
+    motors[7].power=255;
+  }
+  if(key =='6'){
+   motors[2].power=255;
+   motors[3].power=255;
+  }
+}
+void keyReleased(){
+   for (Motor unit : motors) {
+       unit.power=0;
+     }
+  }
 
 boolean overRect(float x, float y, float rectWidth, float rectHeight) {
   if (mouseX > x && mouseX <(x+rectWidth) && mouseY>y && mouseY < (rectHeight + y)) return true;
@@ -312,6 +398,15 @@ void updateArduino() {
   byte payloadRight[] = {-128, 1, 62, 63, 64, 115, 116, 117};
   byte payloadLeft[] = {-128, 0, 2, 3, 4, 5, 6, 7};
   double timer = millis();
+  if(radialMode){
+    for(Motor unit:motors){
+      PVector relativeLocation = new PVector ( unit.x - manIconLocation.x, unit.y - manIconLocation.y);
+      if(PVector.angleBetween(relativeLocation, new PVector(mouseX - manIconLocation.x, mouseY- manIconLocation.y))< angleThreshold) unit.power = squareWave(unit);
+      else unit.power=0;
+    }
+    if((!squareHigh && millis()-squareTimeChange>squareDurationOff) ||(squareHigh && millis()-squareTimeChange>squareDurationOn)){ println("Square Change"); squareTimeChange = millis(); squareHigh=!squareHigh;}
+  }
+  
   println("updateArduino() start");
   for (int i=0; i<motors.length/2; i++) {
     payloadRight[i+2] = byte(motors[i].power);
