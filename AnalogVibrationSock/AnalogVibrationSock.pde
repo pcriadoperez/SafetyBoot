@@ -318,23 +318,23 @@ void keyPressed() {
        unit.power=0;
      }
   }
-  if(key =='8'){
+  if(key =='8' || keyCode == UP){
    motors[4].power=255;
    motors[5].power=255;
    motors[8].power=255;
     motors[9].power=255;
   }
-  if(key =='5'){
+  if(key =='5' || keyCode == DOWN){
     motors[0].power=255;
      motors[1].power=255;
      motors[10].power=255;
     motors[11].power=255;
   }
-  if(key =='4'){
+  if(key =='4' || keyCode == LEFT){
     motors[6].power=255;
     motors[7].power=255;
   }
-  if(key =='6'){
+  if(key =='6'  || keyCode == RIGHT){
    motors[2].power=255;
    motors[3].power=255;
   }
